@@ -1,194 +1,21 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <title>Controle de Estoque - Cris Wellness</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyA7mkCpXTZxiF78LU10g7catNtQ7HYk4WY",
+  authDomain: "estoque-2c829.firebaseapp.com",
+  projectId: "estoque-2c829",
+  storageBucket: "estoque-2c829.firebasestorage.app",
+  messagingSenderId: "523402490037",
+  appId: "1:523402490037:web:42fad321e04ee529628efc",
+  measurementId: "G-NWCY0KPV6E"
+};
 
-  <style>
-    body {
-      background-color: #1f2933;
-    }
-  </style>
-</head>
-
-<body class="text-gray-200">
-
-<!-- 🔒 LOGIN -->
-<div id="login-overlay" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-  <div class="bg-gray-800 p-6 rounded-xl w-80 text-center">
-    <h1 class="text-xl font-semibold mb-4">Acesso Restrito</h1>
-    <input id="access-pass" type="password" placeholder="Senha"
-      class="w-full p-2 rounded bg-gray-700 mb-3 text-center" />
-    <button onclick="checkAccess()"
-      class="w-full bg-gray-500 hover:bg-gray-400 text-black font-semibold py-2 rounded">
-      Entrar
-    </button>
-    <p id="access-error" class="hidden text-red-400 mt-2">Senha incorreta</p>
-  </div>
-</div>
-
-<!-- ⏳ LOADING -->
-<div id="loading-screen" class="fixed inset-0 bg-black flex items-center justify-center z-40">
-  <span class="animate-pulse text-gray-400">Carregando dados...</span>
-</div>
-
-<!-- 📦 APP -->
-<div id="main-content" class="hidden p-6 max-w-5xl mx-auto">
-
-  <h1 class="text-2xl font-semibold mb-6">📦 Controle de Estoque</h1>
-
-  <!-- DASHBOARD -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <div class="bg-gray-800 p-4 rounded-xl">
-      <p class="text-sm text-gray-400">Total de Itens</p>
-      <p id="stat-total" class="text-2xl font-bold">0</p>
-    </div>
-    <div class="bg-gray-800 p-4 rounded-xl">
-      <p class="text-sm text-gray-400">Categorias</p>
-      <p id="stat-categories" class="text-2xl font-bold">0</p>
-    </div>
-    <div class="bg-gray-800 p-4 rounded-xl">
-      <p class="text-sm text-gray-400">Última Atualização</p>
-      <p id="stat-update" class="text-sm">—</p>
-    </div>
-  </div>
-
-  <!-- FORM -->
-  <div class="bg-gray-800 p-4 rounded-xl mb-6">
-    <h2 class="font-semibold mb-3">➕ Novo Item</h2>
-
-    <div class="grid md:grid-cols-4 gap-3">
-      <input id="item-name" placeholder="Produto" class="p-2 bg-gray-700 rounded" />
-      <input id="item-qty" type="number" placeholder="Qtd" class="p-2 bg-gray-700 rounded" />
-      <select id="item-category" class="p-2 bg-gray-700 rounded"></select>
-      <button onclick="addItem()"
-        class="bg-gray-500 hover:bg-gray-400 text-black font-semibold rounded">
-        Adicionar
-      </button>
-    </div>
-  </div>
-
-  <!-- LISTA -->
-  <div class="bg-gray-800 p-4 rounded-xl">
-    <h2 class="font-semibold mb-3">📋 Inventário</h2>
-    <div id="list" class="space-y-2"></div>
-  </div>
-
-</div>
-
-<!-- 🔥 FIREBASE -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-  import {
-    getFirestore,
-    collection,
-    addDoc,
-    onSnapshot,
-    deleteDoc,
-    doc,
-    serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-  /* 🔥 CONFIG FIREBASE */
-  const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_PROJETO.firebaseapp.com",
-    projectId: "SEU_PROJETO",
-    storageBucket: "SEU_PROJETO.appspot.com",
-    messagingSenderId: "XXXXXX",
-    appId: "1:XXXX:web:XXXX"
-  };
-
-  const appId = "chris-wellness-estoque";
-  const ACCESS_PASS = "Hotel303021";
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  let inventory = [];
-  let categories = ["Copa", "Governança", "Manutenção", "SPA", "Escritório"];
-
-  window.checkAccess = async () => {
-    if (document.getElementById("access-pass").value === ACCESS_PASS) {
-      document.getElementById("login-overlay").style.display = "none";
-      document.getElementById("main-content").classList.remove("hidden");
-      await signInAnonymously(auth);
-    } else {
-      document.getElementById("access-error").classList.remove("hidden");
-    }
-  };
-
-  onAuthStateChanged(auth, (user) => {
-    if (!user) return;
-
-    onSnapshot(
-      collection(db, "artifacts", appId, "public", "data", "inventory"),
-      (snap) => {
-        inventory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        render();
-        document.getElementById("loading-screen").style.display = "none";
-      }
-    );
-  });
-
-  window.addItem = async () => {
-    const name = itemName.value.trim();
-    const qty = Number(itemQty.value);
-    const cat = itemCategory.value;
-
-    if (!name || qty <= 0) return;
-
-    await addDoc(
-      collection(db, "artifacts", appId, "public", "data", "inventory"),
-      {
-        name,
-        qty,
-        category: cat,
-        createdAt: serverTimestamp()
-      }
-    );
-
-    itemName.value = "";
-    itemQty.value = "";
-  };
-
-  window.removeItem = async (id) => {
-    await deleteDoc(
-      doc(db, "artifacts", appId, "public", "data", "inventory", id)
-    );
-  };
-
-  const render = () => {
-    list.innerHTML = "";
-
-    inventory.forEach(item => {
-      list.innerHTML += `
-        <div class="flex justify-between bg-gray-700 p-2 rounded">
-          <div>
-            <b>${item.name}</b>
-            <span class="text-xs text-gray-400">(${item.category})</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span>${item.qty}</span>
-            <button onclick="removeItem('${item.id}')" class="text-red-400">✖</button>
-          </div>
-        </div>
-      `;
-    });
-
-    statTotal.innerText = inventory.length;
-    statCategories.innerText = categories.length;
-    statUpdate.innerText = new Date().toLocaleString();
-
-    itemCategory.innerHTML = categories.map(c => `<option>${c}</option>`).join("");
-  };
-</script>
-
-</body>
-</html>
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);

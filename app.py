@@ -23,7 +23,7 @@
         
         .glass-card {
             background: white;
-            border: 1px solid "#e5e7eb";
+            border: "1px solid #e5e7eb";
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 

@@ -1,236 +1,202 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
+  <title>Controle de Estoque - Cris Wellness</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Estoque Chris Wellness Resort</title>
 
+  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-    :root {
-      --brand-color: #868686;
-      --brand-dark: #636363;
-    }
-
     body {
-      font-family: 'Inter', sans-serif;
-      background: #fcfcfc;
-      overscroll-behavior-y: none;
-    }
-
-    .glass-card {
-      background: white;
-      border: 1px solid #e5e7eb;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,.05);
-    }
-
-    .tab-active {
-      border-bottom: 2px solid var(--brand-color);
-      color: var(--brand-color);
-    }
-
-    .btn-primary {
-      background: var(--brand-color);
-    }
-
-    .btn-primary:hover {
-      background: var(--brand-dark);
-    }
-
-    .loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: white;
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    @media print {
-      nav, header, button, .no-print, #stats-container, #toast,
-      .modal-backdrop, #login-overlay { display: none !important; }
+      background-color: #1f2933;
     }
   </style>
 </head>
 
-<body class="min-h-screen pb-12">
+<body class="text-gray-200">
 
-<!-- LOGIN -->
-<div id="login-overlay" class="fixed inset-0 bg-slate-50 z-[2000] flex items-center justify-center">
-  <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm text-center">
-    <h2 class="text-2xl font-bold mb-4">Acesso ao Estoque</h2>
-    <input id="access-pass" type="password" placeholder="Código de Acesso"
-      class="w-full px-4 py-3 border rounded-xl text-center mb-4">
-    <button onclick="checkAccess()" class="btn-primary text-white w-full py-3 rounded-xl font-bold">
+<!-- 🔒 LOGIN -->
+<div id="login-overlay" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+  <div class="bg-gray-800 p-6 rounded-xl w-80 text-center">
+    <h1 class="text-xl font-semibold mb-4">Acesso Restrito</h1>
+    <input id="access-pass" type="password" placeholder="Senha"
+      class="w-full p-2 rounded bg-gray-700 mb-3 text-center" />
+    <button onclick="checkAccess()"
+      class="w-full bg-gray-500 hover:bg-gray-400 text-black font-semibold py-2 rounded">
       Entrar
     </button>
-    <p id="access-error" class="hidden text-red-500 text-sm mt-3">Código incorreto</p>
+    <p id="access-error" class="hidden text-red-400 mt-2">Senha incorreta</p>
   </div>
 </div>
 
-<!-- LOADING -->
-<div id="loading-screen" class="loading-overlay hidden">
-  <div class="animate-spin rounded-full h-10 w-10 border-4 border-slate-300 border-t-slate-800"></div>
+<!-- ⏳ LOADING -->
+<div id="loading-screen" class="fixed inset-0 bg-black flex items-center justify-center z-40">
+  <span class="animate-pulse text-gray-400">Carregando dados...</span>
 </div>
 
-<!-- APP -->
-<div id="main-content" class="hidden max-w-6xl mx-auto px-4 py-8">
+<!-- 📦 APP -->
+<div id="main-content" class="hidden p-6 max-w-5xl mx-auto">
 
-  <header class="flex justify-between items-center mb-8">
-    <h1 class="text-xl font-black">Chris Wellness Resort</h1>
-    <button onclick="openNewTransaction()" class="btn-primary text-white px-6 py-3 rounded-xl font-bold">
-      <i class="fas fa-plus mr-2"></i>Novo Registro
-    </button>
-  </header>
+  <h1 class="text-2xl font-semibold mb-6">📦 Controle de Estoque</h1>
 
-  <div id="stats-container" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6"></div>
-
-  <div class="flex gap-6 mb-6 border-b">
-    <button id="tab-history" onclick="switchTab('history')" class="tab-active pb-3 font-bold">
-      Movimentações
-    </button>
-    <button id="tab-report" onclick="switchTab('report')" class="pb-3 font-bold text-slate-400">
-      Relatório
-    </button>
-  </div>
-
-  <div id="view-history" class="glass-card rounded-xl overflow-hidden">
-    <div class="p-4 border-b">
-      <input id="search-input" oninput="renderData()" placeholder="Buscar item..."
-        class="px-4 py-2 border rounded-xl w-full sm:w-64">
+  <!-- DASHBOARD -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-gray-800 p-4 rounded-xl">
+      <p class="text-sm text-gray-400">Total de Itens</p>
+      <p id="stat-total" class="text-2xl font-bold">0</p>
     </div>
-    <table class="w-full text-sm">
-      <thead class="bg-slate-50 text-slate-400 text-xs uppercase">
-        <tr>
-          <th class="px-4 py-3">Data</th>
-          <th class="px-4 py-3">Item</th>
-          <th class="px-4 py-3">Setor</th>
-          <th class="px-4 py-3">Qtd</th>
-          <th class="px-4 py-3 text-right">Ações</th>
-        </tr>
-      </thead>
-      <tbody id="inventory-body"></tbody>
-    </table>
+    <div class="bg-gray-800 p-4 rounded-xl">
+      <p class="text-sm text-gray-400">Categorias</p>
+      <p id="stat-categories" class="text-2xl font-bold">0</p>
+    </div>
+    <div class="bg-gray-800 p-4 rounded-xl">
+      <p class="text-sm text-gray-400">Última Atualização</p>
+      <p id="stat-update" class="text-sm">—</p>
+    </div>
   </div>
 
-  <div id="view-report" class="hidden glass-card rounded-xl overflow-hidden">
-    <table class="w-full text-sm">
-      <thead class="bg-slate-50 text-slate-400 text-xs uppercase">
-        <tr>
-          <th class="px-4 py-3">Produto</th>
-          <th class="px-4 py-3">Entradas</th>
-          <th class="px-4 py-3">Saídas</th>
-          <th class="px-4 py-3">Saldo</th>
-        </tr>
-      </thead>
-      <tbody id="report-body"></tbody>
-    </table>
+  <!-- FORM -->
+  <div class="bg-gray-800 p-4 rounded-xl mb-6">
+    <h2 class="font-semibold mb-3">➕ Novo Item</h2>
+
+    <div class="grid md:grid-cols-4 gap-3">
+      <input id="item-name" placeholder="Produto" class="p-2 bg-gray-700 rounded" />
+      <input id="item-qty" type="number" placeholder="Qtd" class="p-2 bg-gray-700 rounded" />
+      <select id="item-category" class="p-2 bg-gray-700 rounded"></select>
+      <button onclick="addItem()"
+        class="bg-gray-500 hover:bg-gray-400 text-black font-semibold rounded">
+        Adicionar
+      </button>
+    </div>
+  </div>
+
+  <!-- LISTA -->
+  <div class="bg-gray-800 p-4 rounded-xl">
+    <h2 class="font-semibold mb-3">📋 Inventário</h2>
+    <div id="list" class="space-y-2"></div>
   </div>
 
 </div>
 
-<!-- TOAST -->
-<div id="toast"
- class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-xl opacity-0 transition">
-</div>
-
-<!-- SCRIPT -->
+<!-- 🔥 FIREBASE -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
   import {
-    getFirestore, collection, addDoc, deleteDoc,
-    onSnapshot, doc, setDoc
+    getFirestore,
+    collection,
+    addDoc,
+    onSnapshot,
+    deleteDoc,
+    doc,
+    serverTimestamp
   } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-  /* 🔥 SUBSTITUA PELOS SEUS DADOS */
+  /* 🔥 CONFIG FIREBASE */
   const firebaseConfig = {
     apiKey: "SUA_API_KEY",
     authDomain: "SEU_PROJETO.firebaseapp.com",
     projectId: "SEU_PROJETO",
     storageBucket: "SEU_PROJETO.appspot.com",
-    messagingSenderId: "XXXX",
+    messagingSenderId: "XXXXXX",
     appId: "1:XXXX:web:XXXX"
   };
 
-  const ACCESS_PASS = "Hotel303021";
   const appId = "chris-wellness-estoque";
+  const ACCESS_PASS = "Hotel303021";
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
 
   let inventory = [];
-  let currentTab = "history";
+  let categories = ["Copa", "Governança", "Manutenção", "SPA", "Escritório"];
 
   window.checkAccess = async () => {
-    if (access-pass.value === ACCESS_PASS) {
-      login-overlay.style.display = "none";
-      main-content.classList.remove("hidden");
-      loading-screen.classList.remove("hidden");
+    if (document.getElementById("access-pass").value === ACCESS_PASS) {
+      document.getElementById("login-overlay").style.display = "none";
+      document.getElementById("main-content").classList.remove("hidden");
       await signInAnonymously(auth);
-    } else access-error.classList.remove("hidden");
-  };
-
-  onAuthStateChanged(auth, user => {
-    if (!user) return;
-    onSnapshot(collection(db, "artifacts", appId, "public", "data", "inventory"), snap => {
-      inventory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderData();
-      loading-screen.classList.add("hidden");
-    });
-  });
-
-  window.switchTab = tab => {
-    currentTab = tab;
-    view-history.classList.toggle("hidden", tab !== "history");
-    view-report.classList.toggle("hidden", tab !== "report");
-    tab-history.classList.toggle("tab-active", tab === "history");
-    tab-report.classList.toggle("tab-active", tab === "report");
-    renderData();
-  };
-
-  window.renderData = () => {
-    if (currentTab === "history") {
-      inventory-body.innerHTML = inventory.map(i => `
-        <tr>
-          <td class="px-4 py-2">${i.date}</td>
-          <td class="px-4 py-2 font-bold">${i.name}</td>
-          <td class="px-4 py-2">${i.category}</td>
-          <td class="px-4 py-2">${i.qty}</td>
-          <td class="px-4 py-2 text-right">
-            <button onclick="deleteItem('${i.id}')" class="text-red-500">
-              <i class="fas fa-trash"></i>
-            </button>
-          </td>
-        </tr>
-      `).join("");
     } else {
-      const map = {};
-      inventory.forEach(i => {
-        if (!map[i.name]) map[i.name] = { in: 0, out: 0 };
-        i.type === "entrada" ? map[i.name].in += +i.qty : map[i.name].out += +i.qty;
-      });
-      report-body.innerHTML = Object.keys(map).map(n => `
-        <tr>
-          <td class="px-4 py-2 font-bold">${n}</td>
-          <td class="px-4 py-2 text-emerald-600">+${map[n].in}</td>
-          <td class="px-4 py-2 text-orange-500">-${map[n].out}</td>
-          <td class="px-4 py-2 font-black">${map[n].in - map[n].out}</td>
-        </tr>
-      `).join("");
+      document.getElementById("access-error").classList.remove("hidden");
     }
   };
 
-  window.deleteItem = async id => {
-    await deleteDoc(doc(db, "artifacts", appId, "public", "data", "inventory", id));
+  onAuthStateChanged(auth, (user) => {
+    if (!user) return;
+
+    onSnapshot(
+      collection(db, "artifacts", appId, "public", "data", "inventory"),
+      (snap) => {
+        inventory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        render();
+        document.getElementById("loading-screen").style.display = "none";
+      }
+    );
+  });
+
+  window.addItem = async () => {
+    const name = itemName.value.trim();
+    const qty = Number(itemQty.value);
+    const cat = itemCategory.value;
+
+    if (!name || qty <= 0) return;
+
+    await addDoc(
+      collection(db, "artifacts", appId, "public", "data", "inventory"),
+      {
+        name,
+        qty,
+        category: cat,
+        createdAt: serverTimestamp()
+      }
+    );
+
+    itemName.value = "";
+    itemQty.value = "";
+  };
+
+  window.removeItem = async (id) => {
+    await deleteDoc(
+      doc(db, "artifacts", appId, "public", "data", "inventory", id)
+    );
+  };
+
+  const render = () => {
+    list.innerHTML = "";
+
+    inventory.forEach(item => {
+      list.innerHTML += `
+        <div class="flex justify-between bg-gray-700 p-2 rounded">
+          <div>
+            <b>${item.name}</b>
+            <span class="text-xs text-gray-400">(${item.category})</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span>${item.qty}</span>
+            <button onclick="removeItem('${item.id}')" class="text-red-400">✖</button>
+          </div>
+        </div>
+      `;
+    });
+
+    statTotal.innerText = inventory.length;
+    statCategories.innerText = categories.length;
+    statUpdate.innerText = new Date().toLocaleString();
+
+    itemCategory.innerHTML = categories.map(c => `<option>${c}</option>`).join("");
   };
 </script>
 
 </body>
 </html>
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /artifacts/{appId}/public/data/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
